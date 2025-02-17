@@ -32,8 +32,9 @@ class ProxyScraper:
             for proxy in self.proxies_list:
                 f.write(proxy + '\n')
 
-Usage
-scraper = ProxyScraper()
-proxies = scraper.collect_proxies()
-scraper.save_proxies('proxies.txt')
-print("Proxies collected and saved to proxies.txt")
+while True:
+    scraper = ProxyScraper()
+    proxies = scraper.collect_proxies()
+    scraper.save_proxies('proxies.txt')
+    print("Proxies collected and saved to proxies.txt")
+    time.sleep(3600)  # wait for 1 hour
