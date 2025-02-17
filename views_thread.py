@@ -1,7 +1,7 @@
 import requests
 import time
 from config import Config
-from proxies import ProxyScraper
+from proxy_scraper import ProxyScraper
 import threading
 
 def increase_views():
