@@ -6,6 +6,8 @@ from config import Config
 
 from proxies import ProxyScraper
 
+import threading
+
 
 
 def increase_views():
