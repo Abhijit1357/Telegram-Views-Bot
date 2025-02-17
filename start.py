@@ -6,32 +6,34 @@ from telegram_views_bot import bot
 
 if __name__ == '__main__':
 
-  print("Telegram Views Bot Starting...")
+    print("Telegram Views Bot Starting... Version 1.0")
 
+    
 
+    # Environment Variables se config load karna
 
-  # Environment Variables se config load karna
+    try:
 
-  try:
+        bot.token = os.environ['TELEGRAM_BOT_TOKEN']
 
-    bot.token = os.environ['TELEGRAM_BOT_TOKEN']
+        bot.config.TELEGRAM_BOT_TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
 
-    bot.config.TELEGRAM_BOT_TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
+        bot.config.TELEGRAM_API_ID = os.environ['TELEGRAM_API_ID']
 
-    bot.config.TELEGRAM_API_ID = os.environ['TELEGRAM_API_ID']
+        bot.config.CHANNEL_USERNAME = os.environ['CHANNEL_USERNAME']
 
-    bot.config.CHANNEL_USERNAME = os.environ['CHANNEL_USERNAME']
+        bot.config.POST_ID = os.environ['POST_ID']
 
-    bot.config.POST_ID = os.environ['POST_ID']
+    except KeyError as e:
 
-  except KeyError:
+        print(f"Environment Variable nahin mili: {e}")
 
-    print("Environment Variables nahin mil rahe hain, config.py se config load karta hoon.")
+        print("Config.py se config load karta hoon.")
 
+    
 
+    # Bot ko start karna
 
-  # Bot ko start karna
+    bot.polling()
 
-  bot.polling()
-
-  print("Telegram Views Bot Started Successfully!")
+    print("Telegram Views Bot Started Successfully! Version 1.0")
