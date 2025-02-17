@@ -3,6 +3,9 @@ import time
 from config import Config
 from proxy_scraper import ProxyScraper
 import threading
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 def increase_views():
     proxy_scraper = ProxyScraper()
@@ -31,14 +34,14 @@ def increase_views():
 
                 if response.status_code == 200:
                     views_sent += 1
-                    print(f'Views sent: {views_sent}')
+                    logging.info(f'Views sent: {views_sent}')
                 else:
-                    print(f'Proxy {proxy} blocked or invalid')
-            except Exception as e:
-                print(f'Error with proxy {proxy}: {str(e)}')
+                    logging.warning(f'Proxy {proxy} blocked or invalid')
+            except requests.exceptions.RequestException as e:
+                logging.error(f'Error with proxy {proxy}: {str(e)}')
 
             if views_sent >= max_views:
                 break
 
         time.sleep(Config.VIEWS_SENDING_INTERVAL)
-        print('Views sending limit reached or completed')
+        logging.info('Views sending limit reached or completed')
