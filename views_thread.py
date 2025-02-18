@@ -25,6 +25,8 @@ def increase_views(bot, message, post_url):
     proxy_scraper = ProxyScraper()
     proxies_list = proxy_scraper.collect_proxies()
     max_views = Config.MAX_VIEWS_PER_INTERVAL
+    session = requests.Session()
+    session.timeout = 30  # 30 second ka timeout
     while view_counter.get_views() < max_views:
         for proxy in proxies_list:
             try:
@@ -41,7 +43,7 @@ def increase_views(bot, message, post_url):
                     'Connection': 'keep-alive',
                     'Upgrade-Insecure-Requests': '1'
                 }
-                response = requests.get(post_url, headers=headers, proxies=proxy_dict, timeout=10)
+                response = session.get(post_url, headers=headers, proxies=proxy_dict, timeout=30)
                 if response.status_code == 200:
                     view_counter.increment()
                     bot.send_message(message.chat.id, f"Views: {view_counter.get_views()}")
