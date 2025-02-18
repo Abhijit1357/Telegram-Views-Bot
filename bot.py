@@ -5,7 +5,6 @@ from views_thread import start_views_thread
 from flask import Flask
 
 app = Flask(__name__)
-
 bot = telebot.TeleBot(Config.TELEGRAM_BOT_TOKEN)
 
 @app.route('/')
