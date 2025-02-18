@@ -26,30 +26,38 @@ def increase_views(bot, message, post_url):
     max_views = Config.MAX_VIEWS_PER_INTERVAL
 
     while view_counter.get_views() < max_views:
-        random_proxy = random.choice(proxies_list)
-        try:
-            proxy_dict = {
-                'http': f'http://{random_proxy}',
-                'https': f'http://{random_proxy}'
-            }
-            headers = {
-                'User-Agent': 'Mozilla/5.0',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.5',
-                'Accept-Encoding': 'gzip, deflate',
-                'DNT': '1',
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1'
-            }
-            response = requests.get(post_url, headers=headers, proxies=proxy_dict, verify=False, timeout=10)
-            if response.status_code == 200:
-                view_counter.increment()
-                bot.send_message(message.chat.id, f"Views: {view_counter.get_views()}")
-                logging.info(f'Views sent: {view_counter.get_views()}')
-            else:
-                logging.warning(f'Proxy {random_proxy} blocked or invalid')
-        except requests.exceptions.RequestException as e:
-            logging.error(f'Error with proxy {random_proxy}: {str(e)}')
+        for proxy in proxies_list:
+            try:
+                proxy_dict = {
+                    'http': f'http://{proxy}',
+                    'https': f'http://{proxy}'
+                }
+                headers = {
+                    'User-Agent': 'Mozilla/5.0',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.5',
+                    'Accept-Encoding': 'gzip, deflate',
+                    'DNT': '1',
+                    'Connection': 'keep-alive',
+                    'Upgrade-Insecure-Requests': '1'
+                }
+                response = requests.get(post_url, headers=headers, proxies=proxy_dict, timeout=10)
+                if response.status_code == 200:
+                    view_counter.increment()
+                    bot.send_message(message.chat.id, f"Views: {view_counter.get_views()}")
+                    logging.info(f'Views sent: {view_counter.get_views()}')
+                    break
+                else:
+                    logging.warning(f'Proxy {proxy} blocked or invalid')
+            except requests.exceptions.RequestException as e:
+                logging.error(f'Error with proxy {proxy}: {str(e)}')
+                proxies_list.remove(proxy)
+                logging.info(f'Proxy {proxy} removed from list')
+        if not proxies_list:
+            logging.error('No more proxies available')
+            proxy_scraper = ProxyScraper()
+            proxies_list = proxy_scraper.collect_proxies()
+            logging.info('New proxies collected')
         time.sleep(Config.VIEWS_SENDING_INTERVAL)
     logging.info('Views sending limit reached or completed')
     bot.send_message(message.chat.id, "Views increased!")
