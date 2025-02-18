@@ -71,8 +71,8 @@ def handle_proxies_command(bot, update):
         bot.send_message(update.message.chat.id, "Proxies file not found")
 
 def start_views_thread(bot, update):
-    if update.message.reply_to_message:
-        post_url = update.message.reply_to_message.text
+    if update.reply_to_message:
+        post_url = update.reply_to_message.text
     else:
         text = update.message.text.split(' ')
         if len(text) > 1:
