@@ -50,6 +50,9 @@ def increase_views(bot, message, post_url):
     max_views = Config.MAX_VIEWS_PER_INTERVAL
     while view_counter.get_views() < max_views:
         proxies_list = proxy_scraper.collect_proxies()
+        if not proxies_list:
+            logging.error('No proxies available')
+            break
         with concurrent.futures.ThreadPoolExecutor() as executor:
             executor.map(lambda proxy: send_view(bot, message, post_url, proxy), proxies_list)
         time.sleep(Config.VIEWS_SENDING_INTERVAL)
