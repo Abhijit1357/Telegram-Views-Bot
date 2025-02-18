@@ -24,7 +24,6 @@ def increase_views(bot, message, post_url):
     proxy_scraper = ProxyScraper()
     proxies_list = proxy_scraper.collect_proxies()
     max_views = Config.MAX_VIEWS_PER_INTERVAL
-
     while view_counter.get_views() < max_views:
         for proxy in proxies_list:
             try:
@@ -58,9 +57,17 @@ def increase_views(bot, message, post_url):
             proxy_scraper = ProxyScraper()
             proxies_list = proxy_scraper.collect_proxies()
             logging.info('New proxies collected')
-        time.sleep(Config.VIEWS_SENDING_INTERVAL)
+    time.sleep(Config.VIEWS_SENDING_INTERVAL)
     logging.info('Views sending limit reached or completed')
     bot.send_message(message.chat.id, "Views increased!")
+
+def handle_proxies_command(bot, message):
+    try:
+        with open('proxies.txt', 'r') as f:
+            proxies = f.read()
+            bot.send_message(message.chat.id, proxies)
+    except FileNotFoundError:
+        bot.send_message(message.chat.id, "Proxies file not found")
 
 def start_views_thread(bot, message):
     if message.reply_to_message:
@@ -72,15 +79,7 @@ def start_views_thread(bot, message):
         else:
             bot.send_message(message.chat.id, "Invalid command. Please provide a URL or reply to a message.")
             return
-    threading.Thread(target=increase_views, args=(bot, message, post_url)).start()
-
-def handle_proxies_command(bot, message):
-    try:
-        with open('proxies.txt', 'r') as f:
-            proxies = f.read()
-            bot.send_message(message.chat.id, proxies)
-    except FileNotFoundError:
-        bot.send_message(message.chat.id, "Proxies file not found")
-
-#Add command handler
-bot.add_command('/proxies', handle_proxies_command)
+    if message.text.startswith('/proxies'):
+        handle_proxies_command(bot, message)
+    else:
+        threading.Thread(target=increase_views, args=(bot, message, post_url)).start()
