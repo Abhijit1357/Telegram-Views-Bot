@@ -53,17 +53,17 @@ def increase_views(bot, message, post_url):
         if not proxies_list:
             logging.error('No proxies available')
             break
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
             executor.map(lambda proxy: send_view(bot, message, post_url, proxy), proxies_list)
         time.sleep(Config.VIEWS_SENDING_INTERVAL)
-    logging.info('Views sending limit reached or completed')
+        logging.info('Views sending limit reached or completed')
     bot.send_message(message.chat.id, "Views increased!")
 
 def handle_proxies_command(bot, update):
     try:
         with open('proxies.txt', 'r') as f:
             proxies = f.read()
-            bot.send_message(update.message.chat.id, proxies)
+        bot.send_message(update.message.chat.id, proxies)
     except FileNotFoundError:
         bot.send_message(update.message.chat.id, "Proxies file not found")
 
