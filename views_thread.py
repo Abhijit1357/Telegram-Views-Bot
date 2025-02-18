@@ -41,7 +41,7 @@ def increase_views(bot, message, post_url):
                 'Connection': 'keep-alive',
                 'Upgrade-Insecure-Requests': '1'
             }
-            response = requests.get(post_url, headers=headers, proxies=proxy_dict, timeout=10)
+            response = requests.get(post_url, headers=headers, proxies=proxy_dict, verify=False, timeout=10)
             if response.status_code == 200:
                 view_counter.increment()
                 bot.send_message(message.chat.id, f"Views: {view_counter.get_views()}")
