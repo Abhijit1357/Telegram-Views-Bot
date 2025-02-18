@@ -35,7 +35,7 @@ def stop(message):
     else:
         bot.send_message(message.chat.id, "Views increase process already stopped!")
 
-Bot start hone par log group pe message
+#Bot start hone par log group pe message
 @bot.message_handler(commands=['start_bot'])
 def start_bot(message):
     pass  # Is function ko ignore karein
