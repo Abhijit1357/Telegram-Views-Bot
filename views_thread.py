@@ -6,7 +6,6 @@ import random
 from proxy_scraper import ProxyScraper
 from config import Config
 from telegram.ext import CommandHandler, MessageHandler, Updater
-import concurrent.futures
 
 logging.basicConfig(level=logging.INFO)
 
@@ -28,8 +27,9 @@ def send_view(bot, message, post_url, proxy):
             'http': f'http://{proxy}',
             'https': f'http://{proxy}'
         }
+        user_agents = ['Mozilla/5.0', 'Chrome/103.0.0.0']
         headers = {
-            'User-Agent': 'Mozilla/5.0',
+            'User-Agent': random.choice(user_agents),
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             'Accept-Language': 'en-US,en;q=0.5',
             'Accept-Encoding': 'gzip, deflate',
@@ -37,7 +37,7 @@ def send_view(bot, message, post_url, proxy):
             'Connection': 'keep-alive',
             'Upgrade-Insecure-Requests': '1'
         }
-        response = requests.get(post_url, headers=headers, proxies=proxy_dict, timeout=30)
+        response = requests.get(post_url, headers=headers, proxies=proxy_dict, timeout=60)
         if response.status_code == 200:
             view_counter.increment()
             bot.send_message(message.chat.id, f"Views: {view_counter.get_views()}")
@@ -50,10 +50,9 @@ def increase_views(bot, message, post_url):
     max_views = Config.MAX_VIEWS_PER_INTERVAL
     while view_counter.get_views() < max_views:
         proxies_list = proxy_scraper.collect_proxies()
-        if not proxies_list:
-            logging.error('No proxies available')
-            break
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        if len(proxies_list) < 10:
+            proxy_scraper.collect_proxies()  # refresh proxies
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
             executor.map(lambda proxy: send_view(bot, message, post_url, proxy), proxies_list)
         time.sleep(Config.VIEWS_SENDING_INTERVAL)
     logging.info('Views sending limit reached or completed')
@@ -63,7 +62,7 @@ def handle_proxies_command(bot, update):
     try:
         with open('proxies.txt', 'r') as f:
             proxies = f.read()
-            bot.send_message(update.message.chat.id, proxies)
+        bot.send_message(update.message.chat.id, proxies)
     except FileNotFoundError:
         bot.send_message(update.message.chat.id, "Proxies file not found")
 
