@@ -74,16 +74,16 @@ def start_views_thread(bot, update):
     if update.reply_to_message:
         post_url = update.reply_to_message.text
     else:
-        text = update.message.text.split(' ')
+        text = update.effective_message.text.split(' ')
         if len(text) > 1:
             post_url = text[1]
         else:
-            bot.send_message(update.message.chat.id, "Invalid command. Please provide a URL or reply to a message.")
+            bot.send_message(update.effective_chat.id, "Invalid command. Please provide a URL or reply to a message.")
             return
-    if update.message.text.startswith('/proxies'):
+    if update.effective_message.text.startswith('/proxies'):
         handle_proxies_command(bot, update)
     else:
-        threading.Thread(target=increase_views, args=(bot, update.message, post_url)).start()
+        threading.Thread(target=increase_views, args=(bot, update.effective_message, post_url)).start()
 
 def main():
     from telegram.ext import Updater, CommandHandler, MessageHandler
