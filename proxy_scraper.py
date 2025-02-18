@@ -1,9 +1,9 @@
 import requests
 from bs4 import BeautifulSoup
-import time
-import pickle
-import threading
 import logging
+import threading
+import pickle
+import time
 
 logging.basicConfig(level=logging.INFO)
 
@@ -30,14 +30,14 @@ class ProxyScraper:
 
     def collect_proxies_from_source(self, source):
         try:
-            response = requests.get(source)
+            response = requests.get(source, timeout=10)
             soup = BeautifulSoup(response.text, 'html.parser')
             for row in soup.find_all('tr'):
                 cols = row.find_all('td')
                 if len(cols) >= 2:
                     proxy = cols[0].text.strip() + ':' + cols[1].text.strip()
                     self.proxies_list.append(proxy)
-        except Exception as e:
+        except requests.exceptions.RequestException as e:
             logging.error(f"Error collecting proxies from {source}: {str(e)}")
 
     def save_proxies(self, filename):
@@ -51,13 +51,13 @@ class ProxyScraper:
         except Exception as e:
             logging.error(f"Error loading proxies from {filename}: {str(e)}")
 
-def main():
-    scraper = ProxyScraper()
-    while True:
-        scraper.collect_proxies()
-        scraper.save_proxies('proxies.txt')
-        logging.info("Proxies collected and saved to proxies.txt")
-        time.sleep(3600) # wait for 1 hour
+    def main(self):
+        scraper = ProxyScraper()
+        while True:
+            scraper.collect_proxies()
+            scraper.save_proxies('proxies.txt')
+            logging.info("Proxies collected and saved to proxies.txt")
+            time.sleep(3600)  # wait for 1 hour
 
 if __name__ == '__main__':
-    main()
+    ProxyScraper().main()
