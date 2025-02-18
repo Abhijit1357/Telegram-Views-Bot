@@ -41,6 +41,45 @@ class ProxyScraper:
         except requests.exceptions.RequestException as e:
             logging.error(f"Error collecting proxies from {source}: {str(e)}")
 
+    def check_proxy_speed(self, proxy):
+        try:
+            response = requests.get("https://www.google.com", proxies={"http": proxy, "https": proxy}, timeout=10)
+            if response.status_code == 200:
+                return True
+            else:
+                return False
+        except requests.exceptions.RequestException:
+            return False
+
+    def check_proxy_uptime(self, proxy):
+        try:
+            response = requests.get("https://www.google.com", proxies={"http": proxy, "https": proxy}, timeout=10)
+            if response.status_code == 200:
+                return True
+            else:
+                return False
+        except requests.exceptions.RequestException:
+            return False
+
+    def check_proxy_anonymity(self, proxy):
+        try:
+            response = requests.get("https://www.whatismyip.com/", proxies={"http": proxy, "https": proxy}, timeout=10)
+            soup = BeautifulSoup(response.text, 'html.parser')
+            ip_address = soup.find("span", {"class": "ip"}).text.strip()
+            if ip_address != requests.get("https://api.ipify.org").text.strip():
+                return True
+            else:
+                return False
+        except requests.exceptions.RequestException:
+            return False
+
+    def get_high_quality_proxies(self):
+        high_quality_proxies = []
+        for proxy in self.proxies_list:
+            if self.check_proxy_speed(proxy) and self.check_proxy_uptime(proxy) and self.check_proxy_anonymity(proxy):
+                high_quality_proxies.append(proxy)
+        return high_quality_proxies
+
     def save_proxies(self, filename):
         try:
             with open(filename, 'wb') as f:
@@ -59,8 +98,9 @@ class ProxyScraper:
         while True:
             self.proxies_list = []
             self.collect_proxies()
-            self.save_proxies('proxies.txt')
-            logging.info("Proxies collected and saved to proxies.txt")
+            high_quality_proxies = self.get_high_quality_proxies()
+            self.save_proxies('high_quality_proxies.txt')
+            logging.info("High quality proxies collected and saved to high_quality_proxies.txt")
             time.sleep(0.1)  # wait for 0.1 seconds
 
 if __name__ == '__main__':
