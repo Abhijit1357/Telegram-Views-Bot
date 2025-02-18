@@ -42,8 +42,11 @@ class ProxyScraper:
             logging.error(f"Error collecting proxies from {source}: {str(e)}")
 
     def save_proxies(self, filename):
-        with open(filename, 'wb') as f:
-            pickle.dump(self.proxies_list, f)
+        try:
+            with open(filename, 'wb') as f:
+                pickle.dump(self.proxies_list, f)
+        except Exception as e:
+            logging.error(f"Error saving proxies to {filename}: {str(e)}")
 
     def load_proxies(self, filename):
         try:
