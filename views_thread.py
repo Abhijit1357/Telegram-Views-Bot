@@ -1,53 +1,35 @@
-import threading
-import time
 import requests
-from bs4 import BeautifulSoup
+import time
+import threading
 import logging
+import random
+from proxy_scraper import ProxyScraper
+from config import Config
+from telegram.ext import CommandHandler, MessageHandler, Updater
+import concurrent.futures
 
 logging.basicConfig(level=logging.INFO)
 
-class ProxyScraper:
+class ViewCounter:
     def __init__(self):
-        self.proxy_sources = [
-            'https://free-proxy-list.net/',
-            'https://www.proxynova.com/proxy-server-list',
-            'https://www.hide-my-ip.com/proxylist.shtml',
-            'https://proxylistplus.com/',
-            'https://proxyscrape.com/free-proxy-list'
-        ]
-        self.proxies_list = []
+        self.views = 0
 
-    def collect_proxies(self):
-        threads = []
-        for source in self.proxy_sources:
-            thread = threading.Thread(target=self.collect_proxies_from_source, args=(source,))
-            threads.append(thread)
-            thread.start()
-        for thread in threads:
-            thread.join()
-        return self.proxies_list
+    def increment(self):
+        self.views += 1
 
-    def collect_proxies_from_source(self, source):
-        try:
-            response = requests.get(source, timeout=10)
-            soup = BeautifulSoup(response.text, 'html.parser')
-            for row in soup.find_all('tr'):
-                cols = row.find_all('td')
-                if len(cols) >= 2:
-                    proxy = cols[0].text.strip() + ':' + cols[1].text.strip()
-                    self.proxies_list.append(proxy)
-        except Exception as e:
-            logging.error(f"Error collecting proxies from {source}: {str(e)}")
+    def get_views(self):
+        return self.views
 
-def send_view(post_url, proxy):
+view_counter = ViewCounter()
+
+def send_view(bot, message, post_url, proxy):
     try:
         proxy_dict = {
             'http': f'http://{proxy}',
             'https': f'http://{proxy}'
         }
-        user_agents = ['Mozilla/5.0', 'Chrome/103.0.0.0']
         headers = {
-            'User-Agent': user_agents[0],
+            'User-Agent': 'Mozilla/5.0',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             'Accept-Language': 'en-US,en;q=0.5',
             'Accept-Encoding': 'gzip, deflate',
@@ -55,21 +37,57 @@ def send_view(post_url, proxy):
             'Connection': 'keep-alive',
             'Upgrade-Insecure-Requests': '1'
         }
-        response = requests.get(post_url, headers=headers, proxies=proxy_dict, timeout=60)
+        response = requests.get(post_url, headers=headers, proxies=proxy_dict, timeout=30)
         if response.status_code == 200:
-            logging.info(f"View sent successfully using proxy {proxy}")
+            view_counter.increment()
+            bot.send_message(message.chat.id, f"Views: {view_counter.get_views()}")
+            logging.info(f'Views sent: {view_counter.get_views()}')
     except requests.exceptions.RequestException as e:
-        logging.error(f"Error sending view using proxy {proxy}: {str(e)}")
+        logging.error(f'Error with proxy {proxy}: {str(e)}')
 
-def start_views_thread(bot, message, post_url):
+def increase_views(bot, message, post_url):
+    proxy_scraper = ProxyScraper()
+    max_views = Config.MAX_VIEWS_PER_INTERVAL
+    while view_counter.get_views() < max_views:
+        proxies_list = proxy_scraper.collect_proxies()
+        if not proxies_list:
+            logging.error('No proxies available')
+            break
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            executor.map(lambda proxy: send_view(bot, message, post_url, proxy), proxies_list)
+        time.sleep(Config.VIEWS_SENDING_INTERVAL)
+    logging.info('Views sending limit reached or completed')
+    bot.send_message(message.chat.id, "Views increased!")
+
+def handle_proxies_command(bot, update):
     try:
-        bot.send_message(message.chat.id, "Views thread started!")
-        while True:
-            proxy_scraper = ProxyScraper()
-            proxies_list = proxy_scraper.collect_proxies()
-            for proxy in proxies_list:
-                threading.Thread(target=send_view, args=(post_url, proxy)).start()
-            time.sleep(0.1)  # wait for 0.1 seconds
-    except Exception as e:
-        bot.send_message(message.chat.id, "Error starting views thread!")
-        logging.error(f"Error starting views thread: {str(e)}")
+        with open('proxies.txt', 'r') as f:
+            proxies = f.read()
+            bot.send_message(update.message.chat.id, proxies)
+    except FileNotFoundError:
+        bot.send_message(update.message.chat.id, "Proxies file not found")
+
+def start_views_thread(bot, update):
+    if update.reply_to_message:
+        post_url = update.reply_to_message.text
+    else:
+        text = update.text.split(' ')
+        if len(text) > 1:
+            post_url = text[1]
+        else:
+            bot.send_message(update.effective_chat.id, "Invalid command. Please provide a URL or reply to a message.")
+            return
+    if update.text.startswith('/proxies'):
+        handle_proxies_command(bot, update)
+    else:
+        threading.Thread(target=increase_views, args=(bot, update, post_url)).start()
+
+def main():
+    updater = Updater(token=Config.TELEGRAM_TOKEN, use_context=True)
+    dp = updater.dispatcher
+    dp.add_handler(CommandHandler('start_views', start_views_thread))
+    updater.start_polling()
+    updater.idle()
+
+if __name__ == '__main__':
+    main()
