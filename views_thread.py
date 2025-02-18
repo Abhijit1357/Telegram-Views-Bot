@@ -68,24 +68,24 @@ def handle_proxies_command(bot, update):
     try:
         with open('proxies.txt', 'r') as f:
             proxies = f.read()
-            bot.send_message(update.effective_chat.id, proxies)
+            bot.send_message(update.message.chat.id, proxies)
     except FileNotFoundError:
-        bot.send_message(update.effective_chat.id, "Proxies file not found")
+        bot.send_message(update.message.chat.id, "Proxies file not found")
 
 def start_views_thread(bot, update):
     if update.reply_to_message:
         post_url = update.reply_to_message.text
     else:
-        text = update.effective_message.text.split(' ')
+        text = update.message.text.split(' ')
         if len(text) > 1:
             post_url = text[1]
         else:
-            bot.send_message(update.effective_chat.id, "Invalid command. Please provide a URL or reply to a message.")
+            bot.send_message(update.message.chat.id, "Invalid command. Please provide a URL or reply to a message.")
             return
-    if update.effective_message.text.startswith('/proxies'):
+    if update.message.text.startswith('/proxies'):
         handle_proxies_command(bot, update)
     else:
-        threading.Thread(target=increase_views, args=(bot, update.effective_message, post_url)).start()
+        threading.Thread(target=increase_views, args=(bot, update.message, post_url)).start()
 
 def main():
     updater = Updater(token=Config.TELEGRAM_TOKEN, use_context=True)
