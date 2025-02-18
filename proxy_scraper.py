@@ -2,8 +2,9 @@ import requests
 from bs4 import BeautifulSoup
 import logging
 import threading
-import pickle
+import json
 import time
+import concurrent.futures
 
 logging.basicConfig(level=logging.INFO)
 
@@ -19,13 +20,10 @@ class ProxyScraper:
         self.proxies_list = []
 
     def collect_proxies(self):
-        threads = []
-        for source in self.proxy_sources:
-            thread = threading.Thread(target=self.collect_proxies_from_source, args=(source,))
-            threads.append(thread)
-            thread.start()
-        for thread in threads:
-            thread.join()
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            executor.map(self.collect_proxies_from_source, self.proxy_sources)
+        self.proxies_list = list(set(self.proxies_list))  # remove duplicates
+        self.proxies_list = [proxy for proxy in self.proxies_list if self.validate_proxy(proxy)]  # validate proxies
         return self.proxies_list
 
     def collect_proxies_from_source(self, source):
@@ -41,17 +39,28 @@ class ProxyScraper:
         except requests.exceptions.RequestException as e:
             logging.error(f"Error collecting proxies from {source}: {str(e)}")
 
+    def validate_proxy(self, proxy):
+        try:
+            requests.get('https://www.google.com', proxies={'http': proxy, 'https': proxy}, timeout=5)
+            return True
+        except requests.exceptions.RequestException:
+            return False
+
+    def update_proxy_sources(self):
+        # new proxy sources add karne ke liye code yahaan aayega
+        pass
+
     def save_proxies(self, filename):
         try:
-            with open(filename, 'wb') as f:
-                pickle.dump(self.proxies_list, f)
+            with open(filename, 'w') as f:
+                json.dump(self.proxies_list, f)
         except Exception as e:
             logging.error(f"Error saving proxies to {filename}: {str(e)}")
 
     def load_proxies(self, filename):
         try:
-            with open(filename, 'rb') as f:
-                self.proxies_list = pickle.load(f)
+            with open(filename, 'r') as f:
+                self.proxies_list = json.load(f)
         except Exception as e:
             logging.error(f"Error loading proxies from {filename}: {str(e)}")
 
