@@ -8,13 +8,24 @@ from config import Config
 
 logging.basicConfig(level=logging.INFO)
 
-def increase_views(bot, message):
+class ViewCounter:
+    def __init__(self):
+        self.views = 0
+
+    def increment(self):
+        self.views += 1
+
+    def get_views(self):
+        return self.views
+
+view_counter = ViewCounter()
+
+def increase_views(bot, message, post_url):
     proxy_scraper = ProxyScraper()
     proxies_list = proxy_scraper.collect_proxies()
-    views_sent = 0
     max_views = Config.MAX_VIEWS_PER_INTERVAL
 
-    while views_sent < max_views:
+    while view_counter.get_views() < max_views:
         random_proxy = random.choice(proxies_list)
         try:
             proxy_dict = {
@@ -30,20 +41,22 @@ def increase_views(bot, message):
                 'Connection': 'keep-alive',
                 'Upgrade-Insecure-Requests': '1'
             }
-            url = f'https://t.me/{Config.CHANNEL_USERNAME}/{Config.POST_ID}'
-            response = requests.get(url, headers=headers, proxies=proxy_dict, timeout=10)
+            response = requests.get(post_url, headers=headers, proxies=proxy_dict, timeout=10)
             if response.status_code == 200:
-                views_sent += 1
-                logging.info(f'Views sent: {views_sent}')
+                view_counter.increment()
+                bot.send_message(message.chat.id, f"Views: {view_counter.get_views()}")
+                logging.info(f'Views sent: {view_counter.get_views()}')
             else:
                 logging.warning(f'Proxy {random_proxy} blocked or invalid')
         except requests.exceptions.RequestException as e:
             logging.error(f'Error with proxy {random_proxy}: {str(e)}')
-        if views_sent >= max_views:
-            break
         time.sleep(Config.VIEWS_SENDING_INTERVAL)
     logging.info('Views sending limit reached or completed')
     bot.send_message(message.chat.id, "Views increased!")
 
 def start_views_thread(bot, message):
-    threading.Thread(target=increase_views, args=(bot, message)).start()
+    if message.reply_to_message:
+        post_url = message.reply_to_message.text
+    else:
+        post_url = message.text.split(' ', 1)[1]
+    threading.Thread(target=increase_views, args=(bot, message, post_url)).start()
