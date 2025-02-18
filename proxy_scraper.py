@@ -61,7 +61,7 @@ class ProxyScraper:
             self.collect_proxies()
             self.save_proxies('proxies.txt')
             logging.info("Proxies collected and saved to proxies.txt")
-            time.sleep(1)  # wait for 1 second
+            time.sleep(0.1)  # wait for 0.1 seconds
 
 if __name__ == '__main__':
     ProxyScraper().main()
