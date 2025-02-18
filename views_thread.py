@@ -73,3 +73,14 @@ def start_views_thread(bot, message):
             bot.send_message(message.chat.id, "Invalid command. Please provide a URL or reply to a message.")
             return
     threading.Thread(target=increase_views, args=(bot, message, post_url)).start()
+
+def handle_proxies_command(bot, message):
+    try:
+        with open('proxies.txt', 'r') as f:
+            proxies = f.read()
+            bot.send_message(message.chat.id, proxies)
+    except FileNotFoundError:
+        bot.send_message(message.chat.id, "Proxies file not found")
+
+#Add command handler
+bot.add_command('/proxies', handle_proxies_command)
