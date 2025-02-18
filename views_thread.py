@@ -58,5 +58,10 @@ def start_views_thread(bot, message):
     if message.reply_to_message:
         post_url = message.reply_to_message.text
     else:
-        post_url = message.text.split(' ', 1)[1]
+        text = message.text.split(' ')
+        if len(text) > 1:
+            post_url = text[1]
+        else:
+            bot.send_message(message.chat.id, "Invalid command. Please provide a URL or reply to a message.")
+            return
     threading.Thread(target=increase_views, args=(bot, message, post_url)).start()
