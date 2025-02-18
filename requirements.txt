@@ -1,3 +1,8 @@
-telebot 
-requests 
+telebot
+requests
+python-telegram-bot
 beautifulsoup4
+lxml
+xmltodict
+proxies
+pysocks
