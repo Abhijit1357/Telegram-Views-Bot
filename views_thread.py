@@ -6,6 +6,7 @@ import random
 from proxy_scraper import ProxyScraper
 from config import Config
 from telegram.ext import CommandHandler, MessageHandler, Updater
+import concurrent.futures
 
 logging.basicConfig(level=logging.INFO)
 
@@ -21,46 +22,37 @@ class ViewCounter:
 
 view_counter = ViewCounter()
 
+def send_view(bot, message, post_url, proxy):
+    try:
+        proxy_dict = {
+            'http': f'http://{proxy}',
+            'https': f'http://{proxy}'
+        }
+        headers = {
+            'User-Agent': 'Mozilla/5.0',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
+        }
+        response = requests.get(post_url, headers=headers, proxies=proxy_dict, timeout=30)
+        if response.status_code == 200:
+            view_counter.increment()
+            bot.send_message(message.chat.id, f"Views: {view_counter.get_views()}")
+            logging.info(f'Views sent: {view_counter.get_views()}')
+    except requests.exceptions.RequestException as e:
+        logging.error(f'Error with proxy {proxy}: {str(e)}')
+
 def increase_views(bot, message, post_url):
     proxy_scraper = ProxyScraper()
-    proxies_list = proxy_scraper.collect_proxies()
     max_views = Config.MAX_VIEWS_PER_INTERVAL
-    session = requests.Session()
-    session.timeout = 30  # 30 second ka timeout
     while view_counter.get_views() < max_views:
-        for proxy in proxies_list:
-            try:
-                proxy_dict = {
-                    'http': f'http://{proxy}',
-                    'https': f'http://{proxy}'
-                }
-                headers = {
-                    'User-Agent': 'Mozilla/5.0',
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                    'Accept-Language': 'en-US,en;q=0.5',
-                    'Accept-Encoding': 'gzip, deflate',
-                    'DNT': '1',
-                    'Connection': 'keep-alive',
-                    'Upgrade-Insecure-Requests': '1'
-                }
-                response = session.get(post_url, headers=headers, proxies=proxy_dict, timeout=30)
-                if response.status_code == 200:
-                    view_counter.increment()
-                    bot.send_message(message.chat.id, f"Views: {view_counter.get_views()}")
-                    logging.info(f'Views sent: {view_counter.get_views()}')
-                    break
-                else:
-                    logging.warning(f'Proxy {proxy} blocked or invalid')
-            except requests.exceptions.RequestException as e:
-                logging.error(f'Error with proxy {proxy}: {str(e)}')
-                proxies_list.remove(proxy)
-                logging.info(f'Proxy {proxy} removed from list')
-        if not proxies_list:
-            logging.error('No more proxies available')
-            proxy_scraper = ProxyScraper()
-            proxies_list = proxy_scraper.collect_proxies()
-            logging.info('New proxies collected')
-    time.sleep(Config.VIEWS_SENDING_INTERVAL)
+        proxies_list = proxy_scraper.collect_proxies()
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            executor.map(lambda proxy: send_view(bot, message, post_url, proxy), proxies_list)
+        time.sleep(Config.VIEWS_SENDING_INTERVAL)
     logging.info('Views sending limit reached or completed')
     bot.send_message(message.chat.id, "Views increased!")
 
@@ -85,8 +77,7 @@ def start_views_thread(bot, update):
     if update.text.startswith('/proxies'):
         handle_proxies_command(bot, update)
     else:
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            executor.submit(increase_views, bot, update, post_url)
+        threading.Thread(target=increase_views, args=(bot, update, post_url)).start()
 
 def main():
     updater = Updater(token=Config.TELEGRAM_TOKEN, use_context=True)
