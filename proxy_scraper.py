@@ -56,12 +56,12 @@ class ProxyScraper:
             logging.error(f"Error loading proxies from {filename}: {str(e)}")
 
     def main(self):
-        scraper = ProxyScraper()
         while True:
-            scraper.collect_proxies()
-            scraper.save_proxies('proxies.txt')
+            self.proxies_list = []
+            self.collect_proxies()
+            self.save_proxies('proxies.txt')
             logging.info("Proxies collected and saved to proxies.txt")
-            time.sleep(3600)  # wait for 1 hour
+            time.sleep(1)  # wait for 1 second
 
 if __name__ == '__main__':
     ProxyScraper().main()
