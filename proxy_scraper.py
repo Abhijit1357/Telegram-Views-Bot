@@ -36,7 +36,8 @@ class ProxyScraper:
                 cols = row.find_all('td')
                 if len(cols) >= 2:
                     proxy = cols[0].text.strip() + ':' + cols[1].text.strip()
-                    self.proxies_list.append(proxy)
+                    if ':' in proxy and len(proxy.split(':')) == 2:
+                        self.proxies_list.append(proxy)
         except requests.exceptions.RequestException as e:
             logging.error(f"Error collecting proxies from {source}: {str(e)}")
 
