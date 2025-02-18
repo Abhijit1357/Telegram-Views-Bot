@@ -24,8 +24,7 @@ def error_handler(message):
     except Exception as e:
         bot.send_message(message.chat.id, "Error: " + str(e))
 
-def start_views_thread():
-    bot.message_handler(commands=['views'])(handle_views_command)
+start_views_thread(bot)
 
 if __name__ == '__main__':
     try:
