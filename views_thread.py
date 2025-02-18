@@ -5,6 +5,7 @@ import logging
 import random
 from proxy_scraper import ProxyScraper
 from config import Config
+from telegram.ext import CommandHandler
 
 logging.basicConfig(level=logging.INFO)
 
@@ -61,25 +62,36 @@ def increase_views(bot, message, post_url):
     logging.info('Views sending limit reached or completed')
     bot.send_message(message.chat.id, "Views increased!")
 
-def handle_proxies_command(bot, message):
+def handle_proxies_command(bot, update):
     try:
         with open('proxies.txt', 'r') as f:
             proxies = f.read()
-            bot.send_message(message.chat.id, proxies)
+            bot.send_message(update.message.chat.id, proxies)
     except FileNotFoundError:
-        bot.send_message(message.chat.id, "Proxies file not found")
+        bot.send_message(update.message.chat.id, "Proxies file not found")
 
-def start_views_thread(bot, message):
-    if message.reply_to_message:
-        post_url = message.reply_to_message.text
+def start_views_thread(bot, update):
+    if update.message.reply_to_message:
+        post_url = update.message.reply_to_message.text
     else:
-        text = message.text.split(' ')
+        text = update.message.text.split(' ')
         if len(text) > 1:
             post_url = text[1]
         else:
-            bot.send_message(message.chat.id, "Invalid command. Please provide a URL or reply to a message.")
+            bot.send_message(update.message.chat.id, "Invalid command. Please provide a URL or reply to a message.")
             return
-    if message.text.startswith('/proxies'):
-        handle_proxies_command(bot, message)
+    if update.message.text.startswith('/proxies'):
+        handle_proxies_command(bot, update)
     else:
-        threading.Thread(target=increase_views, args=(bot, message, post_url)).start()
+        threading.Thread(target=increase_views, args=(bot, update.message, post_url)).start()
+
+def main():
+    from telegram.ext import Updater, CommandHandler, MessageHandler
+    updater = Updater(token=Config.TELEGRAM_TOKEN, use_context=True)
+    dp = updater.dispatcher
+    dp.add_handler(CommandHandler('start_views', start_views_thread))
+    updater.start_polling()
+    updater.idle()
+
+if __name__ == '__main__':
+    main()
