@@ -5,6 +5,7 @@ import logging
 import random
 from proxy_scraper import ProxyScraper
 from config import Config
+from requests.auth import HTTPProxyAuth
 
 logging.basicConfig(level=logging.INFO)
 
@@ -32,7 +33,7 @@ def increase_views(bot, message, post_url):
                 'http': f'http://{random_proxy}',
                 'https': f'http://{random_proxy}'
             }
-
+            proxy_auth = HTTPProxyAuth('proxy_username', 'proxy_password')
             headers = {
                 'User-Agent': 'Mozilla/5.0',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -42,8 +43,7 @@ def increase_views(bot, message, post_url):
                 'Connection': 'keep-alive',
                 'Upgrade-Insecure-Requests': '1'
             }
-
-            response = requests.get(post_url, headers=headers, proxies=proxy_dict, timeout=10)
+            response = requests.get(post_url, headers=headers, proxies=proxy_dict, auth=proxy_auth, timeout=10)
             if response.status_code == 200:
                 view_counter.increment()
                 bot.send_message(message.chat.id, f"Views: {view_counter.get_views()}")
