@@ -55,8 +55,9 @@ except Exception as e:
     print(f"Bot start failed: {str(e)}")
 
 def keep_alive():
-    app.run(host='0.0.0.0', port=8000)
+    app.run(host='0.0.0.0', port=8000, debug=False)
 
+threading.Thread(target=keep_alive).daemon = True  # Add this line
 threading.Thread(target=keep_alive).start()
 
 bot.polling()
