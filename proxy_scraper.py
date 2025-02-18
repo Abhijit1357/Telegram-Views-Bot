@@ -1,6 +1,8 @@
 import requests
 from bs4 import BeautifulSoup
 import time
+import pickle
+import threading
 
 class ProxyScraper:
     def __init__(self):
@@ -14,27 +16,45 @@ class ProxyScraper:
         self.proxies_list = []
 
     def collect_proxies(self):
+        threads = []
         for source in self.proxy_sources:
-            try:
-                response = requests.get(source)
-                soup = BeautifulSoup(response.text, 'html.parser')
-                for row in soup.find_all('tr'):
-                    cols = row.find_all('td')
-                    if len(cols) >= 2:
-                        proxy = cols[0].text.strip() + ':' + cols[1].text.strip()
-                        self.proxies_list.append(proxy)
-            except Exception as e:
-                print(f"Error collecting proxies from {source}: {str(e)}")
+            thread = threading.Thread(target=self.collect_proxies_from_source, args=(source,))
+            threads.append(thread)
+            thread.start()
+        for thread in threads:
+            thread.join()
         return self.proxies_list
 
-    def save_proxies(self, filename):
-        with open(filename, 'w') as f:
-            for proxy in self.proxies_list:
-                f.write(proxy + '\n')
+    def collect_proxies_from_source(self, source):
+        try:
+            response = requests.get(source)
+            soup = BeautifulSoup(response.text, 'html.parser')
+            for row in soup.find_all('tr'):
+                cols = row.find_all('td')
+                if len(cols) >= 2:
+                    proxy = cols[0].text.strip() + ':' + cols[1].text.strip()
+                    self.proxies_list.append(proxy)
+        except Exception as e:
+            print(f"Error collecting proxies from {source}: {str(e)}")
 
-while True:
+    def save_proxies(self, filename):
+        with open(filename, 'wb') as f:
+            pickle.dump(self.proxies_list, f)
+
+    def load_proxies(self, filename):
+        try:
+            with open(filename, 'rb') as f:
+                self.proxies_list = pickle.load(f)
+        except Exception as e:
+            print(f"Error loading proxies from {filename}: {str(e)}")
+
+def main():
     scraper = ProxyScraper()
-    proxies = scraper.collect_proxies()
-    scraper.save_proxies('proxies.txt')
-    print("Proxies collected and saved to proxies.txt")
-    time.sleep(3600)  # wait for 1 hour
+    while True:
+        scraper.collect_proxies()
+        scraper.save_proxies('proxies.txt')
+        print("Proxies collected and saved to proxies.txt")
+        time.sleep(3600)  # wait for 1 hour
+
+if __name__ == '__main__':
+    main()
