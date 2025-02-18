@@ -4,11 +4,18 @@ import requests
 import time
 import threading
 from views_thread import increase_views
+from flask import Flask
+
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot is alive!"
 
 bot = telebot.TeleBot(Config.TELEGRAM_BOT_TOKEN)
 views_thread = None  # Global variable initialize kiya
 
-LOG_GROUP_ID = Config.LOG_GROUP_ID
+LOG_GROUP_ID = Config.LOGGER_ID
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -46,5 +53,10 @@ try:
     print("Bot started successfully!")
 except Exception as e:
     print(f"Bot start failed: {str(e)}")
+
+def keep_alive():
+    app.run(host='0.0.0.0', port=8000)
+
+threading.Thread(target=keep_alive).start()
 
 bot.polling()
