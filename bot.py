@@ -12,19 +12,9 @@ def start(message):
 def help(message):
     bot.send_message(message.chat.id, "This bot can help you with...")
 
-@bot.message_handler(content_types=['text'])
-def handle_message(message):
-    bot.send_message(message.chat.id, "You said: " + message.text)
-
-@bot.edited_message_handler(content_types=['text'])
-@bot.message_handler(content_types=['text'])
-def error_handler(message):
-    try:
-        bot.send_message(message.chat.id, "You said: " + message.text)
-    except Exception as e:
-        bot.send_message(message.chat.id, "Error: " + str(e))
-
-start_views_thread(bot)
+@bot.message_handler(commands=['views'])
+def views(message):
+    threading.Thread(target=start_views_thread, args=(bot, message)).start()
 
 if __name__ == '__main__':
     try:
