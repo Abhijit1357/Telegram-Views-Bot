@@ -11,12 +11,3 @@ class Config:
     VIEWS_SENDING_INTERVAL = int(os.environ.get('VIEWS_SENDING_INTERVAL', '3600'))
     THREADS_COUNT = int(os.environ.get('THREADS_COUNT', '500'))
     LOGGER_ID = int(os.environ.get('LOGGER_ID', '-1002134425165'))
-
-    # Optional config
-    # API_ID aur API_HASH ko my.telegram.org se prapt karein
-    # CHANNEL_USERNAME ko apne channel ka username daalein
-    # POST_ID ko apne post ka ID daalein
-    # PROXY_LIST_FILE ko apne proxies.txt file ka naam daalein
-    # MAX_VIEWS_PER_INTERVAL aur VIEWS_SENDING_INTERVAL ko apni zaroorat ke hisab se set karein
-    # THREADS_COUNT ko apni zaroorat ke hisab se set karein
-    # LOGGER_ID ko apne log group ka ID daalein
