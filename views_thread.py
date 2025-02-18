@@ -1,10 +1,11 @@
 import requests
 import time
-from config import Config
-from proxy_scraper import ProxyScraper
 import threading
 import logging
 import random
+from bot import bot
+from proxy_scraper import ProxyScraper
+from config import Config
 
 logging.basicConfig(level=logging.INFO)
 
@@ -44,10 +45,6 @@ def increase_views():
         time.sleep(Config.VIEWS_SENDING_INTERVAL)
     logging.info('Views sending limit reached or completed')
 
-def start_views_thread():
-    views_thread = threading.Thread(target=increase_views)
-    views_thread.daemon = True
-    views_thread.start()
-
-if __name__ == '__main__':
-    start_views_thread()
+def handle_views_command(message):
+    threading.Thread(target=increase_views).start()
+    bot.send_message(message.chat.id, "Views increased!")
