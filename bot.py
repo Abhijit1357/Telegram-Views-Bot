@@ -19,5 +19,18 @@ def help(message):
 def handle_message(message):
     bot.send_message(message.chat.id, "You said: " + message.text)
 
+#Error handling
+@bot.edited_message_handler(content_types=['text'])
+@bot.message_handler(content_types=['text'])
+def error_handler(message):
+    try:
+        bot.send_message(message.chat.id, "You said: " + message.text)
+    except Exception as e:
+        bot.send_message(message.chat.id, "Error: " + str(e))
+
 #Bot ko start karna
-bot.polling()
+if __name__ == '__main__':
+    try:
+        bot.polling()
+    except Exception as e:
+        print("Error: " + str(e))
