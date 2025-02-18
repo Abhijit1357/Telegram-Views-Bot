@@ -5,7 +5,6 @@ import logging
 import random
 from proxy_scraper import ProxyScraper
 from config import Config
-from telegram.ext import CommandHandler, MessageHandler, Updater
 
 logging.basicConfig(level=logging.INFO)
 
@@ -21,72 +20,54 @@ class ViewCounter:
 
 view_counter = ViewCounter()
 
-def send_view(bot, message, post_url, proxy):
-    try:
-        proxy_dict = {
-            'http': f'http://{proxy}',
-            'https': f'http://{proxy}'
-        }
-        user_agents = ['Mozilla/5.0', 'Chrome/103.0.0.0']
-        headers = {
-            'User-Agent': random.choice(user_agents),
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate',
-            'DNT': '1',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1'
-        }
-        response = requests.get(post_url, headers=headers, proxies=proxy_dict, timeout=60)
-        if response.status_code == 200:
-            view_counter.increment()
-            bot.send_message(message.chat.id, f"Views: {view_counter.get_views()}")
-            logging.info(f'Views sent: {view_counter.get_views()}')
-    except requests.exceptions.RequestException as e:
-        logging.error(f'Error with proxy {proxy}: {str(e)}')
-
 def increase_views(bot, message, post_url):
     proxy_scraper = ProxyScraper()
+    proxies_list = proxy_scraper.collect_proxies()
     max_views = Config.MAX_VIEWS_PER_INTERVAL
+
     while view_counter.get_views() < max_views:
-        proxies_list = proxy_scraper.collect_proxies()
-        if len(proxies_list) < 10:
-            proxy_scraper.collect_proxies()  # refresh proxies
-        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
-            executor.map(lambda proxy: send_view(bot, message, post_url, proxy), proxies_list)
+        random_proxy = random.choice(proxies_list)
+        try:
+            proxy_dict = {
+                'http': f'http://{random_proxy}',
+                'https': f'http://{random_proxy}'
+            }
+
+            headers = {
+                'User-Agent': 'Mozilla/5.0',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Accept-Encoding': 'gzip, deflate',
+                'DNT': '1',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1'
+            }
+
+            response = requests.get(post_url, headers=headers, proxies=proxy_dict, timeout=10)
+
+            if response.status_code == 200:
+                view_counter.increment()
+                bot.send_message(message.chat.id, f"Views: {view_counter.get_views()}")
+                logging.info(f'Views sent: {view_counter.get_views()}')
+            else:
+                logging.warning(f'Proxy {random_proxy} blocked or invalid')
+        except requests.exceptions.RequestException as e:
+            logging.error(f'Error with proxy {random_proxy}: {str(e)}')
+
         time.sleep(Config.VIEWS_SENDING_INTERVAL)
+
     logging.info('Views sending limit reached or completed')
     bot.send_message(message.chat.id, "Views increased!")
 
-def handle_proxies_command(bot, update):
-    try:
-        with open('proxies.txt', 'r') as f:
-            proxies = f.read()
-        bot.send_message(update.message.chat.id, proxies)
-    except FileNotFoundError:
-        bot.send_message(update.message.chat.id, "Proxies file not found")
-
-def start_views_thread(bot, update):
-    if update.reply_to_message:
-        post_url = update.reply_to_message.text
+def start_views_thread(bot, message):
+    if message.reply_to_message:
+        post_url = message.reply_to_message.text
     else:
-        text = update.text.split(' ')
+        text = message.text.split(' ')
         if len(text) > 1:
             post_url = text[1]
         else:
-            bot.send_message(update.effective_chat.id, "Invalid command. Please provide a URL or reply to a message.")
+            bot.send_message(message.chat.id, "Invalid command. Please provide a URL or reply to a message.")
             return
-    if update.text.startswith('/proxies'):
-        handle_proxies_command(bot, update)
-    else:
-        threading.Thread(target=increase_views, args=(bot, update, post_url)).start()
 
-def main():
-    updater = Updater(token=Config.TELEGRAM_TOKEN, use_context=True)
-    dp = updater.dispatcher
-    dp.add_handler(CommandHandler('start_views', start_views_thread))
-    updater.start_polling()
-    updater.idle()
-
-if __name__ == '__main__':
-    main()
+    threading.Thread(target=increase_views, args=(bot, message, post_url)).start()
