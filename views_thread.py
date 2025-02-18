@@ -5,7 +5,7 @@ import logging
 import random
 from proxy_scraper import ProxyScraper
 from config import Config
-from telegram.ext import CommandHandler
+from telegram.ext import CommandHandler, MessageHandler, Updater
 
 logging.basicConfig(level=logging.INFO)
 
@@ -66,9 +66,9 @@ def handle_proxies_command(bot, update):
     try:
         with open('proxies.txt', 'r') as f:
             proxies = f.read()
-            bot.send_message(update.message.chat.id, proxies)
+            bot.send_message(update.effective_chat.id, proxies)
     except FileNotFoundError:
-        bot.send_message(update.message.chat.id, "Proxies file not found")
+        bot.send_message(update.effective_chat.id, "Proxies file not found")
 
 def start_views_thread(bot, update):
     if update.reply_to_message:
@@ -86,7 +86,6 @@ def start_views_thread(bot, update):
         threading.Thread(target=increase_views, args=(bot, update.effective_message, post_url)).start()
 
 def main():
-    from telegram.ext import Updater, CommandHandler, MessageHandler
     updater = Updater(token=Config.TELEGRAM_TOKEN, use_context=True)
     dp = updater.dispatcher
     dp.add_handler(CommandHandler('start_views', start_views_thread))
