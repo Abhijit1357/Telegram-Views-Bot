@@ -1,73 +1,63 @@
 import requests
+from bs4 import BeautifulSoup
 import time
+import pickle
 import threading
 import logging
-import random
-from proxy_scraper import ProxyScraper
-from config import Config
 
 logging.basicConfig(level=logging.INFO)
 
-class ViewCounter:
+class ProxyScraper:
     def __init__(self):
-        self.views = 0
+        self.proxy_sources = [
+            'https://free-proxy-list.net/',
+            'https://www.proxynova.com/proxy-server-list',
+            'https://www.hide-my-ip.com/proxylist.shtml',
+            'https://proxylistplus.com/',
+            'https://proxyscrape.com/free-proxy-list'
+        ]
+        self.proxies_list = []
 
-    def increment(self):
-        self.views += 1
+    def collect_proxies(self):
+        threads = []
+        for source in self.proxy_sources:
+            thread = threading.Thread(target=self.collect_proxies_from_source, args=(source,))
+            threads.append(thread)
+            thread.start()
+        for thread in threads:
+            thread.join()
+        return self.proxies_list
 
-    def get_views(self):
-        return self.views
-
-view_counter = ViewCounter()
-
-def increase_views(bot, message, post_url):
-    proxy_scraper = ProxyScraper()
-    proxies_list = proxy_scraper.collect_proxies()
-    max_views = Config.MAX_VIEWS_PER_INTERVAL
-
-    while view_counter.get_views() < max_views:
-        random_proxy = random.choice(proxies_list)
+    def collect_proxies_from_source(self, source):
         try:
-            proxy_dict = {
-                'http': f'http://{random_proxy}',
-                'https': f'http://{random_proxy}'
-            }
+            response = requests.get(source)
+            soup = BeautifulSoup(response.text, 'html.parser')
+            for row in soup.find_all('tr'):
+                cols = row.find_all('td')
+                if len(cols) >= 2:
+                    proxy = cols[0].text.strip() + ':' + cols[1].text.strip()
+                    self.proxies_list.append(proxy)
+        except Exception as e:
+            logging.error(f"Error collecting proxies from {source}: {str(e)}")
 
-            headers = {
-                'User-Agent': 'Mozilla/5.0',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.5',
-                'Accept-Encoding': 'gzip, deflate',
-                'DNT': '1',
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1'
-            }
+    def save_proxies(self, filename):
+        with open(filename, 'wb') as f:
+            pickle.dump(self.proxies_list, f)
 
-            response = requests.get(post_url, headers=headers, proxies=proxy_dict, timeout=10)
+    def load_proxies(self, filename):
+        try:
+            with open(filename, 'rb') as f:
+                self.proxies_list = pickle.load(f)
+        except Exception as e:
+            logging.error(f"Error loading proxies from {filename}: {str(e)}")
 
-            if response.status_code == 200:
-                view_counter.increment()
-                bot.send_message(message.chat.id, f"Views: {view_counter.get_views()}")
-                logging.info(f'Views sent: {view_counter.get_views()}')
-            else:
-                logging.warning(f'Proxy {random_proxy} blocked or invalid')
-        except requests.exceptions.RequestException as e:
-            logging.error(f'Error with proxy {random_proxy}: {str(e)}')
+def main():
+    scraper = ProxyScraper()
+    while True:
+        scraper.collect_proxies()
+        scraper.save_proxies('proxies.txt')
+        logging.info("Proxies collected and saved to proxies.txt")
+        time.sleep(3600) # wait for 1 hour
 
-        time.sleep(Config.VIEWS_SENDING_INTERVAL)
-
-    logging.info('Views sending limit reached or completed')
-    bot.send_message(message.chat.id, "Views increased!")
-
-def start_views_thread(bot, message):
-    if message.reply_to_message:
-        post_url = message.reply_to_message.text
-    else:
-        text = message.text.split(' ')
-        if len(text) > 1:
-            post_url = text[1]
-        else:
-            bot.send_message(message.chat.id, "Invalid command. Please provide a URL or reply to a message.")
-            return
-
-    threading.Thread(target=increase_views, args=(bot, message, post_url)).start()
+if __name__ == '__main__':
+    main()
