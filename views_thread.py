@@ -44,7 +44,6 @@ def increase_views(bot, message, post_url):
             }
 
             response = requests.get(post_url, headers=headers, proxies=proxy_dict, timeout=10)
-
             if response.status_code == 200:
                 view_counter.increment()
                 bot.send_message(message.chat.id, f"Views: {view_counter.get_views()}")
@@ -53,9 +52,7 @@ def increase_views(bot, message, post_url):
                 logging.warning(f'Proxy {random_proxy} blocked or invalid')
         except requests.exceptions.RequestException as e:
             logging.error(f'Error with proxy {random_proxy}: {str(e)}')
-
         time.sleep(Config.VIEWS_SENDING_INTERVAL)
-
     logging.info('Views sending limit reached or completed')
     bot.send_message(message.chat.id, "Views increased!")
 
@@ -69,5 +66,4 @@ def start_views_thread(bot, message):
         else:
             bot.send_message(message.chat.id, "Invalid command. Please provide a URL or reply to a message.")
             return
-
     threading.Thread(target=increase_views, args=(bot, message, post_url)).start()
