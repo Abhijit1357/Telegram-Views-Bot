@@ -48,6 +48,7 @@ def send_view(bot, message, post_url, proxy):
 def increase_views(bot, message, post_url):
     proxy_scraper = ProxyScraper()
     max_views = Config.MAX_VIEWS_PER_INTERVAL
+    views_sending_interval = Config.VIEWS_SENDING_INTERVAL
     while view_counter.get_views() < max_views:
         proxies_list = proxy_scraper.collect_proxies()
         if not proxies_list:
@@ -55,7 +56,7 @@ def increase_views(bot, message, post_url):
             break
         with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
             executor.map(lambda proxy: send_view(bot, message, post_url, proxy), proxies_list)
-        time.sleep(Config.VIEWS_SENDING_INTERVAL)
+        time.sleep(views_sending_interval)
         logging.info('Views sending limit reached or completed')
     bot.send_message(message.chat.id, "Views increased!")
 
