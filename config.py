@@ -1,5 +1,5 @@
 class Config:
-    TELEGRAM_BOT_TOKEN = '7729465278:AAFUIIZrAi0MTOrBmxN6yktOa4Nr4FdZiVE'  # Bot Token
+    TELEGRAM_BOT_TOKEN = '7729465278:AAF_Ao-SfzIleZiiENbkx32uv7UPCTGOXc4'  # Bot Token
     TELEGRAM_API_ID = 22834593  # Telegram API ID
     TELEGRAM_API_HASH = 'f400bc1d1baeb9ae93014ce3ee5ea835'  # Telegram API Hash
     CHANNEL_USERNAME = '@Abt_Abhi'  # Channel Username
