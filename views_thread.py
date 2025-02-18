@@ -1,10 +1,8 @@
+import threading
+import time
 import requests
 from bs4 import BeautifulSoup
-import time
-import pickle
-import threading
 import logging
-import random
 
 logging.basicConfig(level=logging.INFO)
 
@@ -41,24 +39,37 @@ class ProxyScraper:
         except Exception as e:
             logging.error(f"Error collecting proxies from {source}: {str(e)}")
 
-    def save_proxies(self, filename):
-        with open(filename, 'wb') as f:
-            pickle.dump(self.proxies_list, f)
+def send_view(post_url, proxy):
+    try:
+        proxy_dict = {
+            'http': f'http://{proxy}',
+            'https': f'http://{proxy}'
+        }
+        user_agents = ['Mozilla/5.0', 'Chrome/103.0.0.0']
+        headers = {
+            'User-Agent': user_agents[0],
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
+        }
+        response = requests.get(post_url, headers=headers, proxies=proxy_dict, timeout=60)
+        if response.status_code == 200:
+            logging.info(f"View sent successfully using proxy {proxy}")
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error sending view using proxy {proxy}: {str(e)}")
 
-    def load_proxies(self, filename):
-        try:
-            with open(filename, 'rb') as f:
-                self.proxies_list = pickle.load(f)
-        except Exception as e:
-            logging.error(f"Error loading proxies from {filename}: {str(e)}")
-
-    def main(self):
+def start_views_thread(bot, message, post_url):
+    try:
+        bot.send_message(message.chat.id, "Views thread started!")
         while True:
-            self.collect_proxies()
-            self.save_proxies('proxies.txt')
-            logging.info("Proxies collected and saved to proxies.txt")
-            time.sleep(random.uniform(0.1, 1))  # wait for 0.1 to 1 seconds
-
-if __name__ == '__main__':
-    scraper = ProxyScraper()
-    scraper.main()
+            proxy_scraper = ProxyScraper()
+            proxies_list = proxy_scraper.collect_proxies()
+            for proxy in proxies_list:
+                threading.Thread(target=send_view, args=(post_url, proxy)).start()
+            time.sleep(0.1)  # wait for 0.1 seconds
+    except Exception as e:
+        bot.send_message(message.chat.id, "Error starting views thread!")
+        logging.error(f"Error starting views thread: {str(e)}")
